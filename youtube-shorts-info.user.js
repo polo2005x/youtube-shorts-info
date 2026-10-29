@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Shorts Info
 // @namespace    https://github.com/polo2005x
-// @version      1.0.0
+// @version      1.1.0
 // @description  Shows upload date and uploader on Shorts grid cards, and the upload date inside the Shorts player.
 // @author       polo2005x
 // @homepageURL  https://github.com/polo2005x/youtube-shorts-info
@@ -18,6 +18,16 @@
 
   const CARD_SEL = 'ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2';
   const MAX_CONCURRENT = 4;
+
+  // Date color coding: first tier whose maxAge (hours) the upload is younger than wins.
+  // `dark` is used on YouTube's dark theme and in the player, `light` on the light theme.
+  const AGE_TIERS = [
+    { maxAge: 24,      dark: '#3ddc84', light: '#0f8a3c' }, // < 24 hours: green
+    { maxAge: 24 * 3,  dark: '#26c6da', light: '#00838f' }, // < 3 days: teal
+    { maxAge: 24 * 7,  dark: '#64b5f6', light: '#1565c0' }, // < 7 days: blue
+    { maxAge: 24 * 28, dark: '#ffca28', light: '#b26a00' }, // < 28 days: amber
+    // older: default text color
+  ];
 
   // ---------- data ----------
 
@@ -87,6 +97,16 @@
     return rtf.format(Math.round(sec), 'second');
   }
 
+  function ageTier(date) {
+    const hours = (Date.now() - date.getTime()) / 3600000;
+    return AGE_TIERS.findIndex((t) => hours < t.maxAge);
+  }
+
+  function applyAge(el, date) {
+    const tier = ageTier(date);
+    if (tier >= 0) el.classList.add('ysi-age', 'ysi-age-' + tier);
+  }
+
   // ---------- styles ----------
 
   const style = document.createElement('style');
@@ -113,6 +133,13 @@
       pointer-events: auto;
     }
     .ysi-player .ysi-rel { opacity: .75; }
+    .ysi-card .ysi-age { font-weight: 500; }
+    .ysi-player.ysi-age { border-left: 3px solid var(--ysi-age-dark); }
+    .ysi-player.ysi-age .ysi-abs { color: var(--ysi-age-dark); font-weight: 500; }
+    ${AGE_TIERS.map((t, i) => `
+    .ysi-age-${i} { --ysi-age-dark: ${t.dark}; }
+    .ysi-card .ysi-age-${i} { color: ${t.light}; }
+    html[dark] .ysi-card .ysi-age-${i} { color: ${t.dark}; }`).join('')}
   `;
   document.head.appendChild(style);
 
@@ -160,6 +187,7 @@
         const d = document.createElement('span');
         d.textContent = dateFmt.format(info.date);
         d.title = fullFmt.format(info.date) + ' (' + relative(info.date) + ')';
+        applyAge(d, info.date);
         box.appendChild(d);
       }
     } catch (err) {
@@ -230,7 +258,9 @@
       badge.className = 'ysi-player';
       badge.dataset.vid = id;
       badge.title = fullFmt.format(info.date);
+      applyAge(badge, info.date);
       const abs = document.createElement('span');
+      abs.className = 'ysi-abs';
       abs.textContent = '📅 ' + dateFmt.format(info.date);
       const rel = document.createElement('span');
       rel.className = 'ysi-rel';
