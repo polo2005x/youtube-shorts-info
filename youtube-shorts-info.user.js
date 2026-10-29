@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Shorts Info
 // @namespace    https://github.com/polo2005x
-// @version      1.1.0
+// @version      1.2.0
 // @description  Shows upload date and uploader on Shorts grid cards, and the upload date inside the Shorts player.
 // @author       polo2005x
 // @homepageURL  https://github.com/polo2005x/youtube-shorts-info
@@ -85,7 +85,13 @@
   // ---------- formatting ----------
 
   const dateFmt = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  const noYearFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
   const fullFmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' });
+
+  // grid cards are narrow: drop the year for this year's uploads
+  function shortDate(date) {
+    return (date.getFullYear() === new Date().getFullYear() ? noYearFmt : dateFmt).format(date);
+  }
   const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 
   function relative(date) {
@@ -112,14 +118,13 @@
   const style = document.createElement('style');
   style.textContent = `
     .ysi-card {
-      display: flex; flex-wrap: wrap; gap: 0 4px;
+      display: flex; flex-direction: column; align-items: flex-start;
       margin-top: 2px;
       font-size: 1.2rem; line-height: 1.8rem;
       color: var(--yt-spec-text-secondary, #aaa);
     }
     .ysi-card a { color: inherit; text-decoration: none; }
     .ysi-card a:hover { color: var(--yt-spec-text-primary, #fff); }
-    .ysi-card .ysi-sep::before { content: "·"; }
     .ysi-player {
       display: inline-flex; align-items: center; gap: 6px;
       margin: 4px 0;
@@ -132,10 +137,10 @@
       width: fit-content;
       pointer-events: auto;
     }
-    .ysi-player .ysi-rel { opacity: .75; }
-    .ysi-card .ysi-age { font-weight: 500; }
+    .ysi-player .ysi-abs, .ysi-card .ysi-age .ysi-abs { opacity: .75; }
+    .ysi-card .ysi-age .ysi-rel { font-weight: 500; }
     .ysi-player.ysi-age { border-left: 3px solid var(--ysi-age-dark); }
-    .ysi-player.ysi-age .ysi-abs { color: var(--ysi-age-dark); font-weight: 500; }
+    .ysi-player.ysi-age .ysi-rel { color: var(--ysi-age-dark); font-weight: 500; }
     ${AGE_TIERS.map((t, i) => `
     .ysi-age-${i} { --ysi-age-dark: ${t.dark}; }
     .ysi-card .ysi-age-${i} { color: ${t.light}; }
@@ -183,10 +188,11 @@
         box.appendChild(who);
       }
       if (info.date) {
-        if (box.childNodes.length) box.appendChild(Object.assign(document.createElement('span'), { className: 'ysi-sep' }));
         const d = document.createElement('span');
-        d.textContent = dateFmt.format(info.date);
-        d.title = fullFmt.format(info.date) + ' (' + relative(info.date) + ')';
+        const rel = Object.assign(document.createElement('span'), { className: 'ysi-rel', textContent: relative(info.date) });
+        const abs = Object.assign(document.createElement('span'), { className: 'ysi-abs', textContent: ' (' + shortDate(info.date) + ')' });
+        d.append(rel, abs);
+        d.title = fullFmt.format(info.date);
         applyAge(d, info.date);
         box.appendChild(d);
       }
@@ -259,13 +265,13 @@
       badge.dataset.vid = id;
       badge.title = fullFmt.format(info.date);
       applyAge(badge, info.date);
-      const abs = document.createElement('span');
-      abs.className = 'ysi-abs';
-      abs.textContent = '📅 ' + dateFmt.format(info.date);
       const rel = document.createElement('span');
       rel.className = 'ysi-rel';
-      rel.textContent = '· ' + relative(info.date);
-      badge.append(abs, rel);
+      rel.textContent = '📅 ' + relative(info.date);
+      const abs = document.createElement('span');
+      abs.className = 'ysi-abs';
+      abs.textContent = '(' + dateFmt.format(info.date) + ')';
+      badge.append(rel, abs);
       // between the channel row and the title
       const titleItem = panel.querySelector('yt-shorts-video-title-view-model')?.closest('yt-reel-metapanel-view-model > *');
       if (titleItem) titleItem.before(badge); else panel.append(badge);

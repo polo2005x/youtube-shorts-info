@@ -2,8 +2,8 @@
 
 Userscript that adds the missing details to YouTube Shorts:
 
-- **Grid cards** (channel Shorts tab, home/search shelves): uploader handle and upload date under the view count, e.g. `@MrBeast · 23 Oct 2026`. Hover the date for the full timestamp and relative time; click the handle to open the channel.
-- **Shorts player**: an upload-date badge between the channel name and the title, e.g. `📅 16 Oct 2026 · 2 weeks ago`.
+- **Grid cards** (channel Shorts tab, home/search shelves): uploader handle and upload date under the view count, e.g. `@MrBeast` / `6 days ago (23 Oct)` (year shown for older uploads). Hover the date for the full timestamp and relative time; click the handle to open the channel.
+- **Shorts player**: an upload-date badge between the channel name and the title, e.g. `📅 2 weeks ago (16 Oct 2026)`.
 
 Dates are color-coded by age (edit `AGE_TIERS` at the top of the script to change):
 
